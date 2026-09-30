@@ -1,0 +1,74 @@
+package ni.edu.uam.gestion_productos.model;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "proveedor")
+public class Proveedor {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    private String nombre;
+
+    private String telefono;
+
+    private String correo;
+
+    private boolean activo;
+
+    // Constructor vacío (Requerido por JPA)
+    public Proveedor() {
+    }
+
+    // Constructor con parámetros (Opcional pero recomendado)
+    public Proveedor(Integer id, String nombre, String telefono, String correo, boolean activo) {
+        this.id = id;
+        this.nombre = nombre;
+        this.telefono = telefono;
+        this.correo = correo;
+        this.activo = activo;
+    }
+
+    // Getters y Setters
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public String getTelefono() {
+        return telefono;
+    }
+
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
+    }
+
+    public String getCorreo() {
+        return correo;
+    }
+
+    public void setCorreo(String correo) {
+        this.correo = correo;
+    }
+
+    public boolean isActivo() {
+        return activo;
+    }
+
+    public void setActivo(boolean activo) {
+        this.activo = activo;
+    }
+}
