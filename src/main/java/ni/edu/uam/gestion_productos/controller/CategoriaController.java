@@ -1,6 +1,6 @@
 package ni.edu.uam.gestion_productos.controller;
 
-import ni.edu.uam.gestion_productos.model.Categoria;
+import ni.edu.uam.gestion_productos.entity.Categoria;
 import ni.edu.uam.gestion_productos.repository.CategoriaRepository;
 import org.springframework.web.bind.annotation.*;
 
