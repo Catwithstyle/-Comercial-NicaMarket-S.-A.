@@ -43,3 +43,23 @@ Soluciones principales:
 Uso de DTOs (Data Transfer Objects): Convertir las entidades a DTOs antes de retornarlas en el controlador (es la mejor práctica).
 
 Anotaciones de Jackson: Utilizar @JsonIgnore en una de las propiedades, o combinar @JsonManagedReference / @JsonBackReference.
+
+## Pruebas en Postman
+
+### GET /api/productos (listar)
+![GET listar](capturas/get-productos.png)
+
+### GET /api/productos/{id} (buscar)
+![GET por id](capturas/Get-prodcutoid.png)
+
+### GET /api/productos/categoria/{id}
+![GET por categoria](capturas/get-producto-categoria.png)
+
+### POST /api/productos (crear)
+![POST](capturas/post-produicto.png)
+
+### PUT /api/productos/{id} (actualizar)
+![PUT](capturas/Put-producto.png)
+
+### DELETE /api/productos/{id} (eliminar)
+![DELETE](capturas/Delete-producto.png)
