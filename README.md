@@ -1,65 +1,56 @@
-1. ¿Cuál es la función de Spring Data JPA?
-Es un módulo de Spring que simplifica la implementación de la capa de acceso a datos (DAO). Abstrae JPA proporcionando repositorios genéricos con operaciones CRUD integradas, paginación, ordenamiento y generación automática de consultas a partir del nombre de los métodos, reduciendo significativamente el código repetitivo.
+1. Diferencia entre HTTP 401 y 403
+401 Unauthorized: el servidor no sabe quién eres. Falta el token, está mal formado, expiró o la firma es inválida. Es un problema de autenticación.
+403 Forbidden: el servidor sí sabe quién eres (el token es válido), pero tu rol no tiene permiso para ese recurso. Es un problema de autorización.
 
-2. ¿Qué función cumple Hibernate?
-Es un marco de trabajo de Mapeo Objeto-Relacional (ORM). Funciona como el motor que se encarga de traducir los objetos y clases de Java a tablas y registros en la base de datos relacional (y viceversa). Ejecuta las consultas SQL, gestiona las transacciones, maneja la memoria caché y administra la carga perezosa (lazy loading).
 
-3. ¿Qué diferencia existe entre JPA y Hibernate?
-JPA (Jakarta Persistence API): Es la especificación o estándar de Java. Define únicamente interfaces, anotaciones (como @Entity, @Id) y reglas de comportamiento, pero no contiene código que ejecute la lógica.
 
-Hibernate: Es la implementación concreta de la especificación JPA. Es la librería ejecutable que Spring utiliza por defecto para realizar las operaciones físicas sobre la base de datos.
+2. Por qué no basta con leer el contenido de un JWT
 
-4. ¿Qué función cumple @Entity?
-Es una anotación de JPA que marca una clase Java como una Entidad de Persistencia. Le indica a Hibernate que la clase representa una tabla en la base de datos y que sus instancias equivalen a filas de dicha tabla.
+Porque el contenido solo está codificado en Base64, no cifrado, y cualquiera puede leerlo y modificarlo. Un atacante podría cambiar "roles":["USER"] por "roles":["ADMIN"] y reenviar el token. Lo que hace confiable al token es la firma: solo quien tiene la clave secreta puede producir una firma válida. Si el contenido se altera, la firma deja de coincidir y el servidor lo rechaza. Por eso hay que verificar la firma (y la expiración) antes de creer en cualquier claim.
 
-5. ¿Qué función cumple @ManyToOne?
-Establece una relación de muchos a uno entre entidades (por ejemplo, muchos Productos pertenecen a una Categoría). Le indica al motor ORM que en la tabla de la entidad actual debe crearse una columna de clave foránea (Foreign Key) hacia la entidad principal.
+3. Función de JwtDecoder
 
-6. ¿Qué función cumple @JoinColumn?
-Se utiliza para especificar el nombre de la columna que actuará como clave foránea en la tabla física de la base de datos (por ejemplo, @JoinColumn(name = "categoria_id")).
+JwtDecoder recibe el token en texto, lo valida y lo convierte en un objeto Jwt con sus claims. En tu configuración (NimbusJwtDecoder con la clave HS256) hace lo siguiente:
 
-7. ¿Qué función cumple JpaRepository?
-Es una interfaz de Spring Data JPA que ofrece métodos predefinidos para interactuar con la base de datos. Al extender de JpaRepository, obtienes automáticamente métodos para guardar (save), buscar (findById, findAll), eliminar (deleteById) y paginar, sin necesidad de escribir código SQL manual.
+Verifica que la firma coincida usando la clave secreta y el algoritmo HS256.
+Comprueba que el token no haya expirado.
+Si algo falla, lanza una excepción y Spring Security responde 401.
+Si todo está bien, entrega los claims (sub, roles, etc.), que el JwtAuthenticationConverter transforma en las autoridades del usuario.
 
-8. ¿Por qué se utilizan migraciones de base de datos?
-Las herramientas de migración (como Flyway o Liquibase) permiten llevar un control de versiones del esquema de la base de datos. Aseguran que todos los miembros del equipo y los distintos entornos (desarrollo, pruebas, producción) mantengan exactamente la misma estructura de tablas mediante scripts automatizados y trazables.
+Su contraparte es JwtEncoder, que crea y firma los tokens en el login.
 
-9. ¿Qué diferencia existe entre V1, V2 y V3 en las migraciones?
-Representan el orden de versión secuencial y cronológico en el que se ejecutan los archivos de migración:
+4. Riesgos de publicar la clave de firma
 
-V1__...sql: Define la estructura inicial del proyecto (creación de las primeras tablas).
+Con HS256 la misma clave firma y valida, así que quien la tenga puede:
 
-V2__...sql: Agrega cambios o nuevas tablas de forma incremental sobre la versión 1 (por ejemplo, añadir la tabla proveedor).
+Falsificar tokens de cualquier usuario, incluido admin, con cualquier rol y fecha de expiración, y el servidor los aceptaría como legítimos.
+Suplantar identidades y acceder o modificar datos sin conocer ninguna contraseña.
+Saltarse por completo la seguridad, porque no deja rastros distintos a los de un usuario real.
+No poder corregirlo fácilmente: los tokens ya emitidos siguen siendo válidos hasta que expiren, y la única solución es rotar la clave, lo que invalida todos los tokens existentes y obliga a todos a iniciar sesión de nuevo.
 
-V3__...sql: Aplica modificaciones o correcciones posteriores sobre el esquema existente (por ejemplo, agregar nuevas columnas o relaciones).
+## Evidencias de la verificación en Postman
 
-10. ¿Qué problema puede producir una relación bidireccional al generar JSON?
-Produce un error de recursión infinita (o referencia circular / StackOverflowError).
+### 1. Endpoint público (sin autenticación)
+`GET /api/publico/saludo` responde 200.
 
-Ocurre cuando la librería de serialización (como Jackson) intenta convertir la Entidad A que contiene a la Entidad B a JSON; al procesar la Entidad B, esta a su vez intenta convertir la Entidad A que la contiene, generando un bucle infinito que agota la memoria del sistema.
+![Endpoint público](capturas/Get.png)
 
-Soluciones principales:
+### 2. Login correcto
+`POST /api/auth/login` devuelve el token JWT.
 
-Uso de DTOs (Data Transfer Objects): Convertir las entidades a DTOs antes de retornarlas en el controlador (es la mejor práctica).
+![Login correcto](capturas/postLogin.png)
 
-Anotaciones de Jackson: Utilizar @JsonIgnore en una de las propiedades, o combinar @JsonManagedReference / @JsonBackReference.
+### 3. Login con contraseña incorrecta
+Se rechaza con 401.
 
-## Pruebas en Postman
+![Login con contraseña incorrecta](capturas/post_contra_incorrecta.png)
 
-### GET /api/productos (listar)
-![GET listar](capturas/get-productos.png)
+### 4. Endpoint protegido sin token
+`GET /api/productos` sin token responde 401.
 
-### GET /api/productos/{id} (buscar)
-![GET por id](capturas/Get-prodcutoid.png)
+![GET sin token](capturas/Get_sinToken.png)
 
-### GET /api/productos/categoria/{id}
-![GET por categoria](capturas/get-producto-categoria.png)
+### 5. Endpoint protegido con token
+`GET /api/productos` con Bearer Token responde 200.
 
-### POST /api/productos (crear)
-![POST](capturas/post-produicto.png)
-
-### PUT /api/productos/{id} (actualizar)
-![PUT](capturas/Put-producto.png)
-
-### DELETE /api/productos/{id} (eliminar)
-![DELETE](capturas/Delete-producto.png)
+![GET con token](capturas/Get_conToken.png)
