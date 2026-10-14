@@ -72,3 +72,5 @@ public class Proveedor {
         this.activo = activo;
     }
 }
+
+
